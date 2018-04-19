@@ -79,26 +79,35 @@ def call(cmd, timeout=None, signum=signal.SIGKILL, shell=False, stdout=subproces
 
     output = None
     rc = 0
+    clist = False
     try:
-        cmd = cmd.encode('utf-8', 'replace')
-        if timeout is not None and sys.platform != "darwin":
-            cmd = "timeout -s {0} {1} {2}".format(signum, timeout, cmd)
+        if type(cmd) is list:
+            clist = True
+            command = cmd
+            cmd = []
+            for cl in command:
+                cmd += [[c.encode('utf-8', 'replace') for c in cl]]
+            if timeout is not None and sys.platform != "darwin":
+                cmd[0] = ['timeout', '-s', str(signum), str(timeout)] + cmd[0]
+        else:
+            cmd = cmd.encode('utf-8', 'replace')
+            if timeout is not None and sys.platform != "darwin":
+                cmd = "timeout -s {0} {1} {2}".format(signum, timeout, cmd)
 
         log.debug(cmd)
 
         if not shell:
-            spltcmd = cmd.split("|")
-            if len(spltcmd) > 1:
-                cmd = shlex.split(spltcmd[0])
-                cout = Popen(cmd, stdout=stdout)
-                del spltcmd[0]
+            if not clist:
+                spltcmd = cmd.split("|")
+                cmd = [shlex.split(c) for c in spltcmd]
+            if len(cmd) > 1:
+                cout = Popen(cmd[0], stdout=stdout)
+                del cmd[0]
 
-                for next in spltcmd:
-                    nxt = shlex.split(next)
-                    cout = Popen(nxt, stdout=stdout, stderr=stderr, stdin=cout.stdout)
+                for next in cmd:
+                    cout = Popen(next, stdout=stdout, stderr=stderr, stdin=cout.stdout)
             else:
-                cmd = shlex.split(spltcmd[0])
-                cout = Popen(cmd, stdout=stdout, stderr=stderr, shell=shell)
+                cout = Popen(cmd[0], stdout=stdout, stderr=stderr, shell=shell)
         else:
             cout = Popen(cmd, stdout=stdout, stderr=stderr, shell=shell)
         output = cout.communicate()[0]
