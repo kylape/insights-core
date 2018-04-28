@@ -7,8 +7,6 @@ import re
 import shlex
 import yaml
 
-from collections import namedtuple
-
 from insights.contrib.ConfigParser import RawConfigParser
 
 from insights.parsers import ParseException
